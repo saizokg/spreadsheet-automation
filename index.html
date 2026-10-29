@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="EC物販の手作業（落札メールの書き写し・CSVの取り込み・月末の集計など）を、Googleスプレッドシートで自動にするツールをお作りします。モニター価格3,000円・先着5名。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="EC物販のスプレッドシート自動化">
+<meta property="og:description" content="EC物販の手作業（落札メールの書き写し・CSVの取り込み・月末の集計など）を、Googleスプレッドシートで自動にするツールをお作りします。モニター価格3,000円・先着5名。">
+<meta property="og:url" content="https://saizokg.github.io/spreadsheet-automation/">
+<title>EC物販のスプレッドシート自動化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Poppins:wght@500;600;700&display=swap">
+<style>
+/* Layout: 白いヘッダー＋メニュー → 方眼の入った淡い青の見出し帯（左に約束、右に在庫表の画面）→ 左に青線を引いた見出し箱のセクションが続く → 紺の相談帯 → フッター。左揃え・格子で揃える */
+:root{
+  --brand:#1D4ED8;
+  --brand-hover:#1E40AF;
+  --on-brand:#FFFFFF;
+  --navy:#0E2A5E;
+  --on-navy:#FFFFFF;
+  --on-navy-muted:#C5D1E8;
+  --bg:#FFFFFF;
+  --bg-alt:#F3F6FA;
+  --sky:#E8F0FE;
+  --grid-line:rgba(29,78,216,.07);
+  --text:#111827;
+  --muted:#4B5563;
+  --line:#DCE3EC;
+  --ok:#16A34A;
+  --focus:#2563EB;
+  --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.08);
+  /* 見本の表は Google スプレッドシートの見た目に寄せる（両テーマ共通） */
+  --sheet-bg:#FFFFFF;
+  --sheet-head:#F8F9FA;
+  --sheet-grid:#E2E3E3;
+  --sheet-text:#202124;
+  --sheet-sub:#5F6368;
+  --sheet-sel:#1A73E8;
+  --sheet-green:#188038;
+  --sheet-new:#E8F0FE;
+  --font-jp:"Noto Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --font-num:"Poppins","Noto Sans JP","Hiragino Sans","Meiryo",system-ui,sans-serif;
+  --font-sheet:Arial,"Noto Sans JP","Meiryo",sans-serif;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;--s8:64px;--s9:96px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --brand:#4F86F7;--brand-hover:#6E9BF9;--on-brand:#06122B;--navy:#0D2148;--on-navy-muted:#B4C2DD;
+    --bg:#0A111E;--bg-alt:#101A2B;--sky:#122241;--grid-line:rgba(120,160,255,.07);
+    --text:#E6EAF1;--muted:#A6B1C3;--line:#243149;--focus:#7AA7FF;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --brand:#4F86F7;--brand-hover:#6E9BF9;--on-brand:#06122B;--navy:#0D2148;--on-navy-muted:#B4C2DD;
+  --bg:#0A111E;--bg-alt:#101A2B;--sky:#122241;--grid-line:rgba(120,160,255,.07);
+  --text:#E6EAF1;--muted:#A6B1C3;--line:#243149;--focus:#7AA7FF;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-jp);font-size:16px;line-height:1.85;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.4;letter-spacing:.02em}
+p{margin:0}
+a{color:inherit}
+ul,ol,dl,dd{margin:0;padding:0}
+.nw{display:inline-block}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1140px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ico{width:28px;height:28px;flex:none}
+
+/* ヘッダー */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:var(--s5);min-height:68px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex:none}
+.logo svg{width:34px;height:34px}
+.logo b{font:700 1.2rem/1 var(--font-num);letter-spacing:.02em;white-space:nowrap}
+.logo small{display:block;font-size:.7rem;color:var(--muted);font-weight:500;line-height:1.2;margin-top:4px;letter-spacing:.04em}
+.nav{display:none;margin-left:auto;gap:var(--s5);font-size:.9rem;font-weight:500}
+.nav a{white-space:nowrap;text-decoration:none;padding:var(--s2) 0;border-bottom:2px solid transparent}
+.nav a:hover{border-bottom-color:var(--brand);color:var(--brand)}
+.top .btn{margin-left:auto;white-space:nowrap}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);min-height:48px;padding:10px 26px;border-radius:6px;
+  font:700 1rem/1.3 var(--font-jp);text-decoration:none;cursor:pointer;border:2px solid var(--brand);background:var(--brand);color:var(--on-brand);
+  transition:background-color .15s ease,border-color .15s ease,color .15s ease}
+.btn:hover{background:var(--brand-hover);border-color:var(--brand-hover)}
+.btn.ghost{background:transparent;color:var(--brand)}
+.btn.ghost:hover{background:var(--sky)}
+.btn.sm{min-height:44px;padding:8px 18px;font-size:.92rem}
+.btn[aria-disabled="true"]{cursor:default}
+
+/* 見出し帯（ヒーロー） */
+.hero{background-color:var(--sky);background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:32px 32px;border-bottom:1px solid var(--line)}
+.hero .wrap{display:grid;grid-template-columns:1fr;gap:var(--s7);padding-block:var(--s8)}
+.hero-copy{min-width:0;display:flex;flex-direction:column;gap:var(--s5)}
+.hero .for{font-weight:700;color:var(--brand);font-size:.95rem;letter-spacing:.04em}
+.hero h1{font-size:clamp(1.8rem,1.2rem + 2.4vw,2.85rem);font-weight:900;line-height:1.35}
+.hero .lead{color:var(--muted);font-size:clamp(1rem,.96rem + .25vw,1.1rem);max-width:34em}
+.points{list-style:none;display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5)}
+.points li{display:flex;align-items:center;gap:6px;font-weight:700;font-size:.95rem}
+.points svg{width:20px;height:20px;color:var(--ok);flex:none}
+.hero .actions{display:flex;flex-wrap:wrap;gap:var(--s3);margin-top:var(--s2)}
+.hero .note{font-size:.85rem;color:var(--muted)}
+
+/* 在庫表の画面（見本） */
+.screen{margin:0;min-width:0;position:relative;display:flex;flex-direction:column;gap:var(--s3)}
+.window{background:var(--sheet-bg);color:var(--sheet-text);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.win-bar{display:flex;align-items:center;gap:var(--s2);padding:10px 14px;border-bottom:1px solid var(--sheet-grid);font:700 .92rem/1.2 var(--font-sheet)}
+.win-bar i{width:16px;height:20px;border-radius:3px;background:var(--sheet-green);position:relative;flex:none}
+.win-bar i::after{content:"";position:absolute;inset:6px 3px 5px;border:1.5px solid var(--sheet-bg);border-radius:1px}
+.win-bar em{margin-left:auto;font-style:normal;font-weight:400;font-size:.74rem;color:var(--sheet-sub)}
+.grid-scroll{overflow-x:auto}
+.grid{width:100%;border-collapse:collapse;font:400 .8rem/1.3 var(--font-sheet);font-variant-numeric:tabular-nums}
+.grid th,.grid td{border:1px solid var(--sheet-grid);padding:7px 9px;white-space:nowrap;text-align:left}
+.grid thead th{background:var(--sheet-head);color:var(--sheet-sub);font-weight:400;text-align:center;font-size:.72rem;padding:4px}
+.grid .rn{background:var(--sheet-head);color:var(--sheet-sub);text-align:center;width:30px;font-size:.72rem;padding:4px}
+.grid .hdr td:not(.rn){font-weight:700;background:#F1F5FB}
+.grid .num{text-align:right}
+.grid .st{display:inline-block;font-size:.7rem;padding:1px 8px;border-radius:999px;background:#E6F4EA;color:var(--sheet-green);font-weight:700}
+.grid .new td:not(.rn){background:var(--sheet-new)}
+.grid .new .sel{outline:2px solid var(--sheet-sel);outline-offset:4px;border-radius:1px}
+.grid .empty td{height:30px}
+.tag-new{display:inline-block;margin-left:6px;font-size:.66rem;font-weight:700;background:var(--sheet-sel);color:#fff;padding:1px 6px;border-radius:3px;vertical-align:1px}
+.sheet-tabs{display:flex;gap:2px;padding:6px 10px 0;background:var(--sheet-head);border-top:1px solid var(--sheet-grid);font:400 .72rem/1 var(--font-sheet);color:var(--sheet-sub)}
+.sheet-tabs span{padding:7px 12px}
+.sheet-tabs .on{background:var(--sheet-bg);color:var(--sheet-green);font-weight:700;border-radius:6px 6px 0 0;box-shadow:inset 0 -2px 0 var(--sheet-green)}
+.toast{align-self:flex-start;display:flex;align-items:center;gap:var(--s3);background:var(--sheet-bg);color:var(--sheet-text);border:1px solid var(--line);border-left:4px solid var(--sheet-sel);border-radius:8px;padding:10px 16px;box-shadow:var(--shadow);max-width:100%}
+.toast svg{width:24px;height:24px;color:var(--sheet-sel);flex:none}
+.toast b{display:block;font-size:.76rem;color:var(--sheet-sub);font-weight:700;line-height:1.3}
+.toast span{display:block;font-weight:700;font-size:.9rem;line-height:1.4}
+.toast span i{display:inline-block;font-style:normal}
+.screen figcaption{font-size:.8rem;color:var(--muted);line-height:1.6}
+@media (prefers-reduced-motion: no-preference){
+  .screen .toast{animation:toastIn .5s ease-out both}
+  .screen .new td:not(.rn){animation:rowIn 1.6s ease-out .6s both}
+  .screen .tag-new{animation:fadeTag .4s ease-out 1s both}
+}
+@keyframes toastIn{from{transform:translateY(-10px)}to{transform:none}}
+@keyframes rowIn{0%{background:var(--sheet-bg)}30%{background:#C6DAFC}100%{background:var(--sheet-new)}}
+@keyframes fadeTag{from{transform:scale(.7)}to{transform:none}}
+
+/* 導入文 */
+.intro .wrap{padding-block:var(--s7)}
+.intro p{max-width:46em;font-size:1.02rem}
+.intro strong{color:var(--brand)}
+
+/* セクション共通：左に線を引いた見出し箱 */
+.sec{padding-block:var(--s8)}
+.sec.alt{background:var(--bg-alt)}
+.h-box{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-left:6px solid var(--brand);background:var(--bg);padding:14px 22px;margin-bottom:var(--s6)}
+.sec.alt .h-box{background:var(--bg)}
+.h-box h2{font-size:clamp(1.3rem,1.08rem + .9vw,1.75rem);font-weight:700}
+.h-box p{color:var(--muted);font-size:.92rem}
+.sec-lead{max-width:46em;margin-bottom:var(--s6)}
+
+/* お悩み */
+.worry{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:var(--s5) var(--s6)}
+.worry ul{list-style:none;display:grid;gap:var(--s3)}
+.worry li{display:flex;gap:var(--s3);align-items:flex-start;line-height:1.7}
+.worry li::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--brand);margin-top:.65em}
+.solve{margin-top:var(--s5);background:var(--navy);color:var(--on-navy);border-radius:8px;padding:var(--s5) var(--s6);display:flex;flex-direction:column;gap:6px}
+.solve b{font-size:clamp(1.15rem,1rem + .6vw,1.45rem);font-weight:900;line-height:1.5}
+.solve span{color:var(--on-navy-muted);font-size:.92rem}
+
+/* サービス内容：アイコン付きの箱を格子に */
+.cards{display:grid;grid-template-columns:1fr;gap:var(--s4)}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:var(--s5);display:flex;flex-direction:column;gap:var(--s2);min-width:0}
+.card .head{display:flex;align-items:center;gap:var(--s3);color:var(--brand)}
+.card h3{font-size:1.08rem;font-weight:700;color:var(--text)}
+.card p{font-size:.93rem;line-height:1.75}
+.card .ex{font-size:.83rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:var(--s2);margin-top:auto;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px var(--s3)}
+.card .see{color:var(--brand);font-weight:700;text-underline-offset:3px;white-space:nowrap}
+.sub-h{font-size:1.1rem;font-weight:700;margin:var(--s7) 0 var(--s4);display:flex;align-items:center;gap:var(--s2)}
+.sub-h::before{content:"";width:4px;height:1.1em;background:var(--brand)}
+
+/* 入力の見本：元の情報 → 表。同じ色＝同じ情報 */
+:root{
+  --mk-a-bg:#DBEAFE;--mk-a-line:#2563EB;
+  --mk-b-bg:#DCFCE7;--mk-b-line:#16A34A;
+  --mk-c-bg:#FEF3C7;--mk-c-line:#D97706;
+  --mk-d-bg:#EDE9FE;--mk-d-line:#7C3AED;
+  --font-mono:ui-monospace,"Cascadia Mono",Consolas,"Noto Sans JP",monospace;
+}
+[id]{scroll-margin-top:84px}
+.tabs{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s5)}
+.tab{font:700 .92rem/1.3 var(--font-jp);min-height:44px;padding:10px 16px;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:6px;cursor:pointer}
+.tab:hover{border-color:var(--brand);color:var(--brand)}
+.tab[aria-selected="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.demo{display:grid;grid-template-columns:1fr;gap:var(--s3);align-items:center}
+.demo > div{min-width:0}
+.pane-label{font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:var(--s2)}
+.via{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--brand);font-size:.78rem;font-weight:700;text-align:center;line-height:1.4}
+.via svg{width:30px;height:30px;transform:rotate(90deg)}
+.demo-note{margin-top:var(--s5);font-size:.93rem;max-width:52em;display:flex;gap:var(--s2);align-items:flex-start}
+.demo-note svg{width:20px;height:20px;color:var(--brand);flex:none;margin-top:4px}
+.mk{border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--lc)}
+.mk.a{background:var(--mk-a-bg);--lc:var(--mk-a-line)}
+.mk.b{background:var(--mk-b-bg);--lc:var(--mk-b-line)}
+.mk.c{background:var(--mk-c-bg);--lc:var(--mk-c-line)}
+.mk.d{background:var(--mk-d-bg);--lc:var(--mk-d-line)}
+.paper{background:var(--sheet-bg);color:var(--sheet-text);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.paper-head{display:grid;gap:2px;padding:10px 14px;border-bottom:1px solid var(--sheet-grid)}
+.paper-head span{font-size:.74rem;color:var(--sheet-sub)}
+.paper-head b{font-size:.92rem}
+.paper-body{padding:12px 14px;font-size:.86rem;line-height:1.85}
+.paper-body dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px}
+.paper-body dt{color:var(--sheet-sub)}
+.paper-body ul{list-style:none;display:grid;gap:2px;margin-top:4px}
+.file-bar{display:flex;align-items:center;gap:var(--s2);padding:9px 14px;border-bottom:1px solid var(--sheet-grid);font:700 .8rem/1.2 var(--font-mono)}
+.file-bar i{width:14px;height:17px;border:1.5px solid var(--sheet-sub);border-radius:2px;flex:none}
+.csv{margin:0;padding:12px 14px;font:400 .76rem/1.9 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.csv .done{color:#9AA0A6}
+.grid .pick td:not(.rn){background:#FFFBEB}
+.grid .st.wait{background:#FEF3C7;color:#B45309}
+.grid .total td:not(.rn){font-weight:700}
+@media (prefers-reduced-motion: no-preference){
+  .panel .new td:not(.rn){animation:rowIn 1.4s ease-out .25s both}
+}
+@media (min-width:900px){
+  .demo{grid-template-columns:minmax(0,1fr) 96px minmax(0,1.15fr)}
+  .via svg{transform:none}
+}
+
+/* 特長 */
+.feat{display:grid;grid-template-columns:1fr;gap:var(--s4)}
+.feat .card{flex-direction:row;align-items:flex-start;gap:var(--s4)}
+.feat .ico-box{flex:none;width:52px;height:52px;border-radius:8px;background:var(--sky);color:var(--brand);display:grid;place-items:center}
+.feat h3{margin-bottom:4px}
+
+/* 運用事例 */
+.cases{display:grid;grid-template-columns:1fr;gap:var(--s4)}
+.case{background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+.case .label{font-size:.75rem;font-weight:700;color:var(--brand);padding:var(--s4) var(--s5) 0;letter-spacing:.04em}
+.case h3{font-size:1.05rem;padding:4px var(--s5) var(--s3);color:var(--text)}
+.case dl{display:grid;grid-template-columns:auto 1fr;border-top:1px solid var(--line);margin-top:auto}
+.case dt,.case dd{padding:var(--s3) var(--s4);font-size:.9rem;line-height:1.65}
+.case dt{font-weight:700;color:var(--muted);background:var(--bg-alt);border-bottom:1px solid var(--line);white-space:nowrap}
+.case dd{border-bottom:1px solid var(--line)}
+.case dt.after{color:var(--brand)}
+.case dd.after{font-weight:700}
+.case dl > :nth-last-child(-n+2){border-bottom:none}
+
+/* 料金表 */
+.price-table{width:100%;border-collapse:collapse;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.price-table th,.price-table td{padding:var(--s4) var(--s5);border-bottom:1px solid var(--line);text-align:left;vertical-align:top;line-height:1.7}
+.price-table tr:last-child th,.price-table tr:last-child td{border-bottom:none}
+.price-table th{width:30%;background:var(--bg-alt);font-weight:700;font-size:.95rem}
+.price-table .amt{font:600 1.7rem/1.2 var(--font-num);font-variant-numeric:tabular-nums;color:var(--text)}
+.price-table .amt small{font:700 .95rem/1 var(--font-jp);margin-left:2px}
+.price-table .badge{display:inline-block;margin-left:var(--s3);vertical-align:4px;background:var(--brand);color:var(--on-brand);font-size:.78rem;font-weight:700;padding:2px 10px;border-radius:4px}
+.price-table td span{display:block;color:var(--muted);font-size:.9rem}
+.table-scroll{overflow-x:auto;border-radius:8px}
+
+/* 流れ（順番がある） */
+.flow{list-style:none;display:grid;grid-template-columns:1fr;gap:var(--s4);counter-reset:step}
+.flow li{counter-increment:step;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:var(--s5);display:flex;flex-direction:column;gap:var(--s2);position:relative}
+.flow li::before{content:"STEP " counter(step);font:600 .8rem/1 var(--font-num);color:var(--on-brand);background:var(--brand);align-self:flex-start;padding:5px 10px;border-radius:4px;letter-spacing:.06em}
+.flow b{font-size:1.02rem;line-height:1.55}
+.flow span{color:var(--muted);font-size:.9rem;line-height:1.7}
+
+/* よくある質問 */
+.faq{display:grid;gap:var(--s3);max-width:52em}
+.faq details{background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.faq summary{list-style:none;cursor:pointer;display:flex;gap:var(--s3);align-items:flex-start;padding:var(--s4) var(--s5);font-weight:700;line-height:1.6}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before,.faq .ans::before{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font:600 .9rem/1 var(--font-num)}
+.faq summary::before{content:"Q";background:var(--brand);color:var(--on-brand)}
+.faq summary::after{content:"";flex:none;margin-left:auto;margin-top:8px;width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s ease}
+.faq details[open] summary::after{transform:rotate(225deg);margin-top:12px}
+.faq .ans{display:flex;gap:var(--s3);padding:0 var(--s5) var(--s4);color:var(--muted);line-height:1.8}
+.faq .ans::before{content:"A";background:var(--sky);color:var(--brand)}
+
+/* 相談帯 */
+.cta{background:var(--navy);color:var(--on-navy)}
+.cta .wrap{padding-block:var(--s8);display:grid;gap:var(--s4);justify-items:center;text-align:center}
+.cta h2{font-size:clamp(1.4rem,1.1rem + 1.2vw,2rem);font-weight:900}
+.cta p{color:var(--on-navy-muted);max-width:38em}
+.cta .btn{margin-top:var(--s2);min-height:56px;padding:12px 40px;font-size:1.08rem;background:#FFFFFF;color:#0E2A5E;border-color:#FFFFFF}
+.cta .btn:hover{background:#E8F0FE;border-color:#E8F0FE}
+.cta .pending{font-size:.85rem;color:var(--on-navy-muted)}
+
+/* フッター */
+.foot{border-top:1px solid var(--line)}
+.foot .wrap{padding-block:var(--s6);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s4)}
+.foot nav{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);font-size:.85rem}
+.foot nav a{text-decoration:none;color:var(--muted)}
+.foot nav a:hover{color:var(--brand)}
+.foot small{font-size:.8rem;color:var(--muted)}
+
+/* 特定商取引法に基づく表記：料金表と同じ枠で、文字は一段小さく */
+.legal{padding-block:var(--s7)}
+.legal .h-box h2{font-size:1.1rem}
+.legal .price-table th,.legal .price-table td{font-size:.86rem;padding:var(--s3) var(--s4)}
+.legal .price-table th{width:28%}
+
+@media (min-width:640px){
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .feat{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .flow{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (min-width:900px){
+  .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .cases{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .flow{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .flow li:not(:last-child)::after{content:"";position:absolute;right:-13px;top:50%;width:10px;height:10px;border-top:2px solid var(--brand);border-right:2px solid var(--brand);transform:translateY(-50%) rotate(45deg)}
+}
+@media (min-width:1000px){
+  .hero .wrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;padding-block:var(--s9)}
+}
+/* 見出しのロゴが日本語（スプレッドシート自動化）で幅を取るので、メニューは1100px以上で出す（960pxで折り返して崩れた） */
+@media (min-width:1100px){
+  .nav{display:flex}
+  .top .btn{margin-left:var(--s2)}
+}
+@media (max-width:560px){
+  .grid .c-date{display:none}
+  .logo small{display:none}
+  .logo b{font-size:1rem}
+  .top .wrap{gap:var(--s3)}
+  .price-table th{width:34%}
+  .h-box{padding:12px 16px}
+  .worry,.solve{padding:var(--s5)}
+}
+@media (max-width:360px){
+  .logo{gap:6px}
+  .logo svg{width:26px;height:26px}
+  .logo b{font-size:.88rem}
+  .top .btn.sm{padding:8px 12px}
+}
+@media (prefers-reduced-motion: reduce){
+  .btn,.faq summary::after{transition:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="ページの先頭へ">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="7" fill="var(--brand)"/><g fill="none" stroke="var(--on-brand)" stroke-width="1.6" opacity=".55"><path d="M7 13.5h20M7 20.5h20M13.5 7v20M20.5 7v20"/></g><rect x="20.5" y="20.5" width="6.5" height="6.5" rx="1" fill="var(--on-brand)"/></svg>
+      <span><b>スプレッドシート自動化</b><small>EC物販事業者さま向け</small></span>
+    </a>
+    <nav class="nav" aria-label="ページ内メニュー">
+      <a href="#service">サービス内容</a>
+      <a href="#sample">入力の見本</a>
+      <a href="#feature">特長</a>
+      <a href="#price">料金</a>
+      <a href="#flow">ご依頼の流れ</a>
+      <a href="#faq">よくある質問</a>
+    </nav>
+    <a class="btn sm js-form" href="#soudan">無料相談</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div class="hero-copy">
+        <p class="for">EC物販事業者さま向け　業務自動化サービス</p>
+        <h1 id="hero-title"><span class="nw">仕入れ・売上・発送の</span><span class="nw">記録を、</span><span class="nw">スプレッドシートで</span><span class="nw">自動化します。</span></h1>
+        <p class="lead">いまお使いのGoogleスプレッドシートの中で動く自動化ツールを、設置まで含めてお作りします。新しいソフトの導入も、AIの契約も必要ありません。</p>
+        <ul class="points" aria-label="お約束">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>AIの契約・利用料なし</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>納品後1か月は無料で修正</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>使い方の説明つき</li>
+        </ul>
+        <div class="actions">
+          <a class="btn js-form" href="#soudan">無料で相談する</a>
+          <a class="btn ghost" href="#price">料金を見る</a>
+        </div>
+        <p class="note">全国どこからでも、オンラインで対応します。</p>
+      </div>
+
+      <figure class="screen" aria-label="落札のメールが届くと在庫表に1行増える画面の見本">
+        <div class="toast" role="note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>
+          <div><b>メールを受信</b><span><i>おめでとうございます！</i><i>落札しました　¥9,800</i></span></div>
+        </div>
+        <div class="window">
+          <div class="win-bar"><i aria-hidden="true"></i>在庫リスト<em>自動で記録中</em></div>
+          <div class="grid-scroll">
+            <table class="grid">
+              <thead><tr><th class="rn" scope="col"></th><th scope="col">A</th><th scope="col">B</th><th class="c-date" scope="col">C</th><th scope="col">D</th><th scope="col">E</th></tr></thead>
+              <tbody>
+                <tr class="hdr"><td class="rn">1</td><td>管理番号</td><td>商品名</td><td class="c-date">仕入れ日</td><td class="num">仕入れ値</td><td>状態</td></tr>
+                <tr><td class="rn">2</td><td>K-0151</td><td>Nikon F3 ボディ</td><td class="c-date">10/22</td><td class="num">¥18,500</td><td><span class="st">出品中</span></td></tr>
+                <tr><td class="rn">3</td><td>K-0152</td><td>Canon FD 50mm F1.4</td><td class="c-date">10/24</td><td class="num">¥6,200</td><td><span class="st">撮影待ち</span></td></tr>
+                <tr class="new"><td class="rn">4</td><td><span class="sel">K-0153</span><span class="tag-new">自動</span></td><td>Pentax SP 55mm付き</td><td class="c-date">10/26</td><td class="num">¥9,800</td><td><span class="st">検品待ち</span></td></tr>
+                <tr class="empty"><td class="rn">5</td><td></td><td></td><td class="c-date"></td><td></td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="sheet-tabs" aria-hidden="true"><span class="on">在庫リスト</span><span>売上</span><span>発送待ち</span></div>
+        </div>
+        <figcaption>メールが届くと表に1行追加し、管理番号まで付けます。画面はイメージです（データは見本）。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="intro" aria-label="はじめに">
+    <div class="wrap">
+      <p>EC物販の毎日には、<strong>落札メールの書き写し・CSVの貼り付け・月末の集計</strong>といった、同じ手順の繰り返しが多くあります。こうした作業をGoogleスプレッドシートとGAS（Googleが無料で提供している自動化の仕組み）で自動にするツールを、物販の現場に合わせてお作りします。</p>
+    </div>
+  </section>
+
+  <section class="sec alt" aria-labelledby="worry-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="worry-title">こんなお悩みはありませんか？</h2></div>
+      <div class="worry">
+        <ul>
+          <li>落札のメールを見ながら、商品名や仕入れ値を表に打ち込んでいる</li>
+          <li>販売サイトからダウンロードしたCSVを、毎回コピペして並べ直している</li>
+          <li>売れた商品を、管理画面を見ながら別の表に書き写している</li>
+          <li>月末に、売上と利益を手作業で集計している</li>
+          <li>発送待ちの商品がどれか、毎朝自分で探して確かめている</li>
+        </ul>
+      </div>
+      <div class="solve">
+        <b>どれも、スプレッドシートに任せられる作業です。</b>
+        <span>手作業を1つ選んでいただければ、その作業を自動にするツールをお作りします。</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="service" aria-labelledby="service-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="service-title">サービス内容</h2><p>完成したツールは、いまお使いのスプレッドシートの中で動きます。</p></div>
+      <div class="cards">
+        <article class="card">
+          <div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><h3>CSVの取り込み</h3></div>
+          <p>ダウンロードしたCSVを、決まった形の表に並べ直して追加します。</p>
+          <p class="ex"><span>例：販売サイトの注文一覧を売上の表へ</span><a class="see" href="#sample" data-tab="tab-csv">入り方を見る</a></p>
+        </article>
+        <article class="card">
+          <div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="13" height="10" rx="1.5"/><path d="m3.5 6 6 4.5 6-4.5"/><path d="M14 19h7m0 0-3-3m3 3-3 3"/></svg><h3>メールからの転記</h3></div>
+          <p>メールやフォームが届いたら、中身を読み取って表に1行ずつ書き込みます。</p>
+          <p class="ex"><span>例：落札のメールから在庫の表へ</span><a class="see" href="#sample" data-tab="tab-mail">入り方を見る</a></p>
+        </article>
+        <article class="card">
+          <div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/></svg><h3>売上・利益の集計</h3></div>
+          <p>売上・仕入れ・利益を、日ごと・月ごとに自動でまとめます。</p>
+          <p class="ex"><span>例：月末の売上と利益の計算</span><a class="see" href="#sample" data-tab="tab-sum">入り方を見る</a></p>
+        </article>
+        <article class="card">
+          <div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17"/></svg><h3>一覧の自動作成</h3></div>
+          <p>条件に合う商品だけを、別のシートに並べます。</p>
+          <p class="ex"><span>例：発送待ち・出品待ちの一覧</span><a class="see" href="#sample" data-tab="tab-list">入り方を見る</a></p>
+        </article>
+        <article class="card">
+          <div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><h3>メールでの通知</h3></div>
+          <p>決まった時間に、やることの一覧をメールでお届けします。</p>
+          <p class="ex"><span>例：毎朝、今日発送する商品のお知らせ</span><a class="see" href="#sample" data-tab="tab-notify">入り方を見る</a></p>
+        </article>
+        <article class="card">
+          <div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg><h3>それ以外の作業</h3></div>
+          <p>手作業の中身を伺って、スプレッドシートで自動にできるかをお答えします。</p>
+          <p class="ex">ご相談だけでも大丈夫です</p>
+        </article>
+      </div>
+
+      <h3 class="sub-h">ツールが動くきっかけ</h3>
+      <div class="cards">
+        <div class="card"><div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h3>決まった時間に</h3></div><p>毎朝9時、毎週月曜、月末などに自動で動きます。</p></div>
+        <div class="card"><div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg><h3>メールやフォームが届いたら</h3></div><p>届いた内容を、その都度表に追加します。</p></div>
+        <div class="card"><div class="head"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v9.5"/><path d="M9 13.5V9a1.5 1.5 0 0 1 3 0v4m0-1.5a1.5 1.5 0 0 1 3 0V14m0-1a1.5 1.5 0 0 1 3 0v3a5 5 0 0 1-5 5h-1.2a5 5 0 0 1-3.9-1.9L5 16.5a1.5 1.5 0 0 1 2.3-1.9L9 16.5"/></svg><h3>ボタンを押したら</h3></div><p>シートのメニューから、好きなときに動かせます。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt" id="sample" aria-labelledby="sample-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="sample-title">入力の見本</h2><p>どの情報が、表のどこに入るかを色で示しています。同じ色が同じ情報です（データはすべて見本です）。</p></div>
+      <div class="tabs" role="tablist" aria-label="見本の種類">
+        <button class="tab" type="button" role="tab" id="tab-csv" aria-controls="panel-csv" aria-selected="true">CSVの取り込み</button>
+        <button class="tab" type="button" role="tab" id="tab-mail" aria-controls="panel-mail" aria-selected="false" tabindex="-1">メールからの転記</button>
+        <button class="tab" type="button" role="tab" id="tab-sum" aria-controls="panel-sum" aria-selected="false" tabindex="-1">売上・利益の集計</button>
+        <button class="tab" type="button" role="tab" id="tab-list" aria-controls="panel-list" aria-selected="false" tabindex="-1">一覧の自動作成</button>
+        <button class="tab" type="button" role="tab" id="tab-notify" aria-controls="panel-notify" aria-selected="false" tabindex="-1">メールでの通知</button>
+      </div>
+
+      <div class="panel" role="tabpanel" id="panel-csv" aria-labelledby="tab-csv">
+        <div class="demo">
+          <div>
+            <p class="pane-label">販売サイトからダウンロードしたCSV</p>
+            <div class="paper">
+              <div class="file-bar"><i aria-hidden="true"></i>注文一覧.csv</div>
+<pre class="csv">注文番号,注文日,商品名,数量,価格,送料,国
+<span class="done">10-24496,2026/10/21,Olympus OM-1,1,26500,2500,GB</span>
+<span class="mk d">10-24518</span>,<span class="mk c">2026/10/25</span>,<span class="mk a">Yashica Electro 35</span>,1,<span class="mk b">19800</span>,2500,US</pre>
+            </div>
+          </div>
+          <div class="via"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>必要な列だけ<br>並べ直して追加</div>
+          <div>
+            <p class="pane-label">スプレッドシート「売上」</p>
+            <div class="window">
+              <div class="grid-scroll">
+                <table class="grid">
+                  <thead><tr><th class="rn" scope="col"></th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th><th scope="col">D</th></tr></thead>
+                  <tbody>
+                    <tr class="hdr"><td class="rn">1</td><td>注文日</td><td>注文番号</td><td>商品名</td><td class="num">売上</td></tr>
+                    <tr><td class="rn">2</td><td>10/15</td><td>10-24471</td><td>Minolta X-700</td><td class="num">¥22,400</td></tr>
+                    <tr><td class="rn">3</td><td>10/21</td><td>10-24496</td><td>Olympus OM-1</td><td class="num">¥26,500</td></tr>
+                    <tr class="new"><td class="rn">4</td><td><span class="mk c">10/25</span></td><td><span class="mk d">10-24518</span></td><td><span class="mk a">Yashica Electro 35</span></td><td class="num"><span class="mk b">¥19,800</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>CSVの列の順番や日付の書き方を、表の形に合わせて直してから追加します。すでに表にある注文（灰色の行）は、二重には入れません。</span></p>
+      </div>
+
+      <div class="panel" role="tabpanel" id="panel-mail" aria-labelledby="tab-mail" hidden>
+        <div class="demo">
+          <div>
+            <p class="pane-label">届いたメール</p>
+            <div class="paper">
+              <div class="paper-head"><span>差出人：オークションサイト</span><b>おめでとうございます！落札しました</b></div>
+              <div class="paper-body">
+                <p>以下の商品を落札しました。</p>
+                <dl>
+                  <dt>商品名</dt><dd><span class="mk a">Pentax SP 55mm付き</span></dd>
+                  <dt>落札金額</dt><dd><span class="mk b">9,800円</span></dd>
+                  <dt>落札日</dt><dd><span class="mk c">2026年10月26日</span></dd>
+                  <dt>商品ID</dt><dd><span class="mk d">A2610-5531</span></dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <div class="via"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>読み取って<br>1行追加</div>
+          <div>
+            <p class="pane-label">スプレッドシート「在庫リスト」</p>
+            <div class="window">
+              <div class="grid-scroll">
+                <table class="grid">
+                  <thead><tr><th class="rn" scope="col"></th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th><th scope="col">D</th><th scope="col">E</th></tr></thead>
+                  <tbody>
+                    <tr class="hdr"><td class="rn">1</td><td>管理番号</td><td>商品名</td><td>仕入れ日</td><td class="num">仕入れ値</td><td>商品ID</td></tr>
+                    <tr><td class="rn">2</td><td>K-0151</td><td>Nikon F3 ボディ</td><td>10/22</td><td class="num">¥18,500</td><td>A2610-5102</td></tr>
+                    <tr><td class="rn">3</td><td>K-0152</td><td>Canon FD 50mm F1.4</td><td>10/24</td><td class="num">¥6,200</td><td>A2610-5317</td></tr>
+                    <tr class="new"><td class="rn">4</td><td>K-0153<span class="tag-new">自動</span></td><td><span class="mk a">Pentax SP 55mm付き</span></td><td><span class="mk c">10/26</span></td><td class="num"><span class="mk b">¥9,800</span></td><td><span class="mk d">A2610-5531</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>メールの文面から必要な項目だけを読み取って書き込みます。管理番号は、ひとつ前の番号に続けて自動で付けます。</span></p>
+      </div>
+
+      <div class="panel" role="tabpanel" id="panel-sum" aria-labelledby="tab-sum" hidden>
+        <div class="demo">
+          <div>
+            <p class="pane-label">スプレッドシート「売上」（10月分）</p>
+            <div class="window">
+              <div class="grid-scroll">
+                <table class="grid">
+                  <thead><tr><th class="rn" scope="col"></th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th><th scope="col">D</th><th scope="col">E</th></tr></thead>
+                  <tbody>
+                    <tr class="hdr"><td class="rn">1</td><td>日付</td><td>商品名</td><td class="num">売上</td><td class="num">仕入れ値</td><td class="num">送料・手数料</td></tr>
+                    <tr><td class="rn">2</td><td>10/03</td><td>Nikon FM2 ボディ</td><td class="num"><span class="mk b">¥38,000</span></td><td class="num"><span class="mk a">¥17,900</span></td><td class="num"><span class="mk c">¥6,200</span></td></tr>
+                    <tr><td class="rn">3</td><td>10/09</td><td>Canon AE-1 Program</td><td class="num"><span class="mk b">¥15,800</span></td><td class="num"><span class="mk a">¥6,800</span></td><td class="num"><span class="mk c">¥3,100</span></td></tr>
+                    <tr><td class="rn">4</td><td>10/15</td><td>Minolta X-700</td><td class="num"><span class="mk b">¥22,400</span></td><td class="num"><span class="mk a">¥9,000</span></td><td class="num"><span class="mk c">¥4,300</span></td></tr>
+                    <tr><td class="rn">5</td><td>10/21</td><td>Olympus OM-1</td><td class="num"><span class="mk b">¥26,500</span></td><td class="num"><span class="mk a">¥11,800</span></td><td class="num"><span class="mk c">¥4,900</span></td></tr>
+                    <tr><td class="rn">6</td><td>10/25</td><td>Yashica Electro 35</td><td class="num"><span class="mk b">¥19,800</span></td><td class="num"><span class="mk a">¥9,800</span></td><td class="num"><span class="mk c">¥3,600</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="via"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>月ごとに<br>合計して計算</div>
+          <div>
+            <p class="pane-label">スプレッドシート「月次集計」</p>
+            <div class="window">
+              <div class="grid-scroll">
+                <table class="grid">
+                  <thead><tr><th class="rn" scope="col"></th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th><th scope="col">D</th><th scope="col">E</th><th scope="col">F</th></tr></thead>
+                  <tbody>
+                    <tr class="hdr"><td class="rn">1</td><td>月</td><td class="num">件数</td><td class="num">売上</td><td class="num">仕入れ</td><td class="num">送料・手数料</td><td class="num">利益</td></tr>
+                    <tr><td class="rn">2</td><td>9月</td><td class="num">4</td><td class="num">¥98,300</td><td class="num">¥44,100</td><td class="num">¥17,600</td><td class="num">¥36,600</td></tr>
+                    <tr class="new total"><td class="rn">3</td><td>10月</td><td class="num">5</td><td class="num"><span class="mk b">¥122,500</span></td><td class="num"><span class="mk a">¥55,300</span></td><td class="num"><span class="mk c">¥22,100</span></td><td class="num">¥45,100</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>売上・仕入れ・送料をそれぞれ月ごとに合計し、利益（売上−仕入れ−送料・手数料）まで計算します。</span></p>
+      </div>
+
+      <div class="panel" role="tabpanel" id="panel-list" aria-labelledby="tab-list" hidden>
+        <div class="demo">
+          <div>
+            <p class="pane-label">スプレッドシート「在庫リスト」</p>
+            <div class="window">
+              <div class="grid-scroll">
+                <table class="grid">
+                  <thead><tr><th class="rn" scope="col"></th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th><th scope="col">D</th></tr></thead>
+                  <tbody>
+                    <tr class="hdr"><td class="rn">1</td><td>管理番号</td><td>商品名</td><td>状態</td><td>送り先</td></tr>
+                    <tr class="pick"><td class="rn">2</td><td><span class="mk a">K-0148</span></td><td><span class="mk a">Mamiya 645 ボディ</span></td><td><span class="st wait">発送待ち</span></td><td><span class="mk a">アメリカ</span></td></tr>
+                    <tr><td class="rn">3</td><td>K-0149</td><td>Contax 50mm F1.7</td><td><span class="st">出品中</span></td><td></td></tr>
+                    <tr class="pick"><td class="rn">4</td><td><span class="mk d">K-0150</span></td><td><span class="mk d">Rollei 35</span></td><td><span class="st wait">発送待ち</span></td><td><span class="mk d">ドイツ</span></td></tr>
+                    <tr><td class="rn">5</td><td>K-0151</td><td>Nikon F3 ボディ</td><td><span class="st">出品中</span></td><td></td></tr>
+                    <tr><td class="rn">6</td><td>K-0152</td><td>Canon FD 50mm F1.4</td><td><span class="st">撮影待ち</span></td><td></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="via"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>「発送待ち」の<br>行だけ集める</div>
+          <div>
+            <p class="pane-label">スプレッドシート「発送待ち」</p>
+            <div class="window">
+              <div class="win-bar"><i aria-hidden="true"></i>発送待ち<em>2件</em></div>
+              <div class="grid-scroll">
+                <table class="grid">
+                  <thead><tr><th class="rn" scope="col"></th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th></tr></thead>
+                  <tbody>
+                    <tr class="hdr"><td class="rn">1</td><td>管理番号</td><td>商品名</td><td>送り先</td></tr>
+                    <tr class="new"><td class="rn">2</td><td><span class="mk a">K-0148</span></td><td><span class="mk a">Mamiya 645 ボディ</span></td><td><span class="mk a">アメリカ</span></td></tr>
+                    <tr class="new"><td class="rn">3</td><td><span class="mk d">K-0150</span></td><td><span class="mk d">Rollei 35</span></td><td><span class="mk d">ドイツ</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>「状態」が発送待ちの商品だけを、別のシートに集めます。発送が済んで状態を変えれば、一覧からも消えます。</span></p>
+      </div>
+
+      <div class="panel" role="tabpanel" id="panel-notify" aria-labelledby="tab-notify" hidden>
+        <div class="demo">
+          <div>
+            <p class="pane-label">スプレッドシート「発送待ち」</p>
+            <div class="window">
+              <div class="win-bar"><i aria-hidden="true"></i>発送待ち<em>2件</em></div>
+              <div class="grid-scroll">
+                <table class="grid">
+                  <thead><tr><th class="rn" scope="col"></th><th scope="col">A</th><th scope="col">B</th><th scope="col">C</th></tr></thead>
+                  <tbody>
+                    <tr class="hdr"><td class="rn">1</td><td>管理番号</td><td>商品名</td><td>送り先</td></tr>
+                    <tr><td class="rn">2</td><td><span class="mk a">K-0148</span></td><td><span class="mk a">Mamiya 645 ボディ</span></td><td><span class="mk a">アメリカ</span></td></tr>
+                    <tr><td class="rn">3</td><td><span class="mk d">K-0150</span></td><td><span class="mk d">Rollei 35</span></td><td><span class="mk d">ドイツ</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="via"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>毎朝9:00に<br>メールで送る</div>
+          <div>
+            <p class="pane-label">届くメール</p>
+            <div class="paper">
+              <div class="paper-head"><span>差出人：在庫リスト（自動送信）　毎朝 9:00</span><b>今日発送する商品（2件）</b></div>
+              <div class="paper-body">
+                <p>発送待ちの商品が2件あります。</p>
+                <ul>
+                  <li><span class="mk a">K-0148　Mamiya 645 ボディ（アメリカ）</span></li>
+                  <li><span class="mk d">K-0150　Rollei 35（ドイツ）</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>決まった時間に、表の中身をまとめてメールでお届けします。送る時間と宛先は、ご希望に合わせて決められます。</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="feature" aria-labelledby="feature-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="feature-title">特長</h2></div>
+      <div class="feat">
+        <div class="card"><span class="ico-box"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 9v10h14V9"/><path d="M10 19v-5h4v5"/></svg></span><div><h3>自社のEC物販で、毎日運用している仕組み</h3><p>海外向けにカメラやレンズを販売する自社の業務で、実際に動かしている自動化をもとにお作りします。</p></div></div>
+        <div class="card"><span class="ico-box"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg></span><div><h3>新しいソフトもAIの契約も不要</h3><p>ツールはお使いのGoogleスプレッドシートの中で動きます。月々の利用料はかかりません。</p></div></div>
+        <div class="card"><span class="ico-box"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8.2 7.5 9.5 4.3-1.3 7.5-5 7.5-9.5V6Z"/><path d="m9 12 2 2 4-4"/></svg></span><div><h3>納品後1か月は無料で修正</h3><p>最初に決めた内容のとおりに動かないときは、無料で直します。その後は月額500円の保守をご用意しています。</p></div></div>
+        <div class="card"><span class="ico-box"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg></span><div><h3>設置はこちらで。お渡しするのは使い方だけ</h3><p>GASやプログラムの知識は必要ありません。ボタンの押し方と結果の見方をまとめてお渡しします。</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt" aria-labelledby="case-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="case-title">自社での運用事例</h2><p>自社のEC物販で、いま毎日動いている自動化です。</p></div>
+      <div class="cases">
+        <article class="case">
+          <p class="label">仕入れ</p>
+          <h3>落札メールから在庫表へ自動記録</h3>
+          <dl><dt>これまで</dt><dd>落札のメールを見て、商品名などを表に手で入力</dd><dt class="after">いま</dt><dd class="after">落札のメールを読み取って、在庫の表に自動で記録</dd></dl>
+        </article>
+        <article class="case">
+          <p class="label">在庫管理</p>
+          <h3>管理番号の自動採番</h3>
+          <dl><dt>これまで</dt><dd>新しい商品の管理番号を、毎回考えて打ち込む</dd><dt class="after">いま</dt><dd class="after">表に取り込んだ時点で、番号を自動で付ける</dd></dl>
+        </article>
+        <article class="case">
+          <p class="label">日々の確認</p>
+          <h3>やることの定時通知</h3>
+          <dl><dt>これまで</dt><dd>やることを、毎日自分で確かめる</dd><dt class="after">いま</dt><dd class="after">決まった時間に、やることの一覧が自動で届く</dd></dl>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="price" aria-labelledby="price-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="price-title">料金</h2></div>
+      <div class="table-scroll">
+        <table class="price-table">
+          <tbody>
+            <tr><th scope="row">ツールの作成</th><td><span class="amt">3,000<small>円</small></span><span class="badge">モニター価格・先着5名</span><span>物販の手作業1つ分のツール。使い方の説明つきでお渡しします。</span></td></tr>
+            <tr><th scope="row">納品後の修正</th><td><strong>1か月間 無料</strong><span>最初に決めた内容のとおりに動かないときの修正です（機能の追加は含みません）。</span></td></tr>
+            <tr><th scope="row">保守</th><td><span class="amt">500<small>円／月</small></span><span>月額500円の基本使用料で、ずっと作業分の費用だけで修正・保守します。</span></td></tr>
+            <tr><th scope="row">有料の修正</th><td><strong>作業前にお見積もり</strong><span>直す前に金額をお伝えし、その額を超えて請求することはありません。</span></td></tr>
+            <tr><th scope="row">AI・ソフトの費用</th><td><strong>かかりません</strong><span>ツールはお使いのGoogleスプレッドシートの中で動きます。</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt" id="flow" aria-labelledby="flow-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="flow-title">ご依頼の流れ</h2></div>
+      <ol class="flow">
+        <li><b>無料相談</b><span>相談フォームから、困っている作業を教えてください。まとまっていなくても大丈夫です。</span></li>
+        <li><b>ご提案・お見積もり</b><span>どの作業を、どこまで自動にするかを一緒に決め、金額をお伝えします。</span></li>
+        <li><b>設置</b><span>お使いのスプレッドシートに招待していただき、こちらで組み込みます。自動で動かすための最初の許可だけ、ご本人のアカウントで押していただきます。</span></li>
+        <li><b>納品・1か月の無料修正</b><span>使い方の説明つきで納品します。修正の期間が終わったら、共有を外していただきます。</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec" id="faq" aria-labelledby="faq-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="faq-title">よくある質問</h2></div>
+      <div class="faq">
+        <details id="faq-1"><summary>GASやプログラムの知識がなくても頼めますか？</summary><p class="ans">はい。組み込みはこちらで行います。お渡しするのは、ボタンの押し方や結果の見方をまとめた「使い方」だけです。</p></details>
+        <details id="faq-2"><summary>どんな作業でも頼めますか？</summary><p class="ans">現在は、物販の手作業1つ分（CSVの取り込み・転記・集計・一覧づくり・通知）に絞ってお受けしています。Shopify・Amazonなどのシステム連携、会計ソフトや画面操作の自動化、Excel・VBAだけの環境は、現在お受けしていません。</p></details>
+        <details id="faq-3"><summary>月々の費用はかかりますか？</summary><p class="ans">ツールはお使いのGoogleスプレッドシートの中で動くので、AIの契約や月々の利用料はかかりません。保守をご希望の方は、月額500円の基本使用料で、ずっと作業分の費用だけで修正・保守します。</p></details>
+        <details id="faq-4"><summary>無料の修正には、何が含まれますか？</summary><p class="ans">最初に決めた内容のとおりに動かないときの修正です。新しい機能の追加は含まれません。</p></details>
+        <details id="faq-5"><summary>シートの中身を見られるのが心配です。</summary><p class="ans">招待していただいたスプレッドシートだけで作業します。修正の期間が終わったら、共有を外していただきます。</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="soudan" aria-labelledby="cta-title">
+    <div class="wrap">
+      <h2 id="cta-title"><span class="nw">まずは、毎日の作業を</span><span class="nw">1つお聞かせください</span></h2>
+      <p>「こんなことはできる？」というご相談だけでも大丈夫です。ご相談は無料です。</p>
+      <a class="btn js-form" id="form-btn" href="#soudan">相談フォームを開く</a>
+      <p class="pending" id="form-pending">相談フォームは準備中です。</p>
+    </div>
+  </section>
+
+  <section class="sec legal" id="tokushoho" aria-labelledby="legal-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="legal-title">特定商取引法に基づく表記</h2></div>
+      <div class="table-scroll">
+        <table class="price-table">
+          <tbody>
+            <tr><th scope="row">事業者名</th><td>アスレテルノ（azuleterno）</td></tr>
+            <tr><th scope="row">運営責任者・所在地・電話番号</th><td>ご請求があれば、遅滞なくメールでお知らせします（<a class="js-form" href="#soudan">相談フォーム</a>からご連絡ください）。</td></tr>
+            <tr><th scope="row">料金</th><td>ツールの作成：3,000円（モニター価格・先着5名）<br>保守：月額500円（任意）<br>納品から1か月を過ぎた後の修正：作業の前にお見積もりした金額</td></tr>
+            <tr><th scope="row">料金のほかにかかる費用</th><td>ありません（消費税は表示の金額に含みます。インターネットの通信費はお客さまのご負担です）。</td></tr>
+            <tr><th scope="row">お支払いの時期</th><td>納品後、動作をご確認いただいてから（後払い）</td></tr>
+            <tr><th scope="row">お支払いの方法</th><td>銀行振込（保守の月額のお支払い方法は、お申し込みの際にご案内します）</td></tr>
+            <tr><th scope="row">納品の時期</th><td>お見積もりの際にお約束した日までに納品します。</td></tr>
+            <tr><th scope="row">お申し込みの取りやめ</th><td>納品前であれば、いつでも取りやめられます（費用はかかりません）。保守はいつでも解約でき、解約した翌月から料金はかかりません。</td></tr>
+            <tr><th scope="row">数量の決まり</th><td>モニター価格は先着5名までです。</td></tr>
+            <tr><th scope="row">動作に必要な環境</th><td>Googleアカウント（無料）と、Googleスプレッドシートが使えるパソコン</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="ページの先頭へ">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="7" fill="var(--brand)"/><g fill="none" stroke="var(--on-brand)" stroke-width="1.6" opacity=".55"><path d="M7 13.5h20M7 20.5h20M13.5 7v20M20.5 7v20"/></g><rect x="20.5" y="20.5" width="6.5" height="6.5" rx="1" fill="var(--on-brand)"/></svg>
+      <span><b>スプレッドシート自動化</b><small>EC物販事業者さま向け</small></span>
+    </a>
+    <nav aria-label="フッターメニュー">
+      <a href="#service">サービス内容</a>
+      <a href="#sample">入力の見本</a>
+      <a href="#feature">特長</a>
+      <a href="#price">料金</a>
+      <a href="#flow">ご依頼の流れ</a>
+      <a href="#faq">よくある質問</a>
+      <a href="#tokushoho">特定商取引法に基づく表記</a>
+    </nav>
+    <small>© 2026 azuleterno</small>
+  </div>
+</footer>
+
+<script>
+// 相談フォームのURL（Googleフォーム）。入れると全部の「相談」ボタンがフォームを開く。
+const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd5Jnqaqoc4FJDo0Cm1AJCGg8Dw86UIGgzeEBNMrxFPZRo5eA/viewform";
+
+(function () {
+  const buttons = document.querySelectorAll(".js-form");
+  const pending = document.getElementById("form-pending");
+  const formBtn = document.getElementById("form-btn");
+  if (FORM_URL) {
+    buttons.forEach(function (a) {
+      a.href = FORM_URL;
+      a.target = "_blank";
+      a.rel = "noopener";
+    });
+    pending.hidden = true;
+  } else {
+    formBtn.setAttribute("aria-disabled", "true");
+    formBtn.addEventListener("click", function (e) { e.preventDefault(); });
+  }
+
+  // 入力の見本のタブ
+  const tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  function selectTab(tab, focus) {
+    tabs.forEach(function (t) {
+      const on = t === tab;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+    });
+    if (focus) tab.focus();
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { selectTab(t, false); });
+    t.addEventListener("keydown", function (e) {
+      let n = null;
+      if (e.key === "ArrowRight") n = tabs[(i + 1) % tabs.length];
+      if (e.key === "ArrowLeft") n = tabs[(i - 1 + tabs.length) % tabs.length];
+      if (e.key === "Home") n = tabs[0];
+      if (e.key === "End") n = tabs[tabs.length - 1];
+      if (n) { e.preventDefault(); selectTab(n, true); }
+    });
+  });
+  document.querySelectorAll(".see[data-tab]").forEach(function (a) {
+    a.addEventListener("click", function () {
+      const t = document.getElementById(a.getAttribute("data-tab"));
+      if (t) selectTab(t, false);
+    });
+  });
+})();
+</script>
+</body>
+</html>
