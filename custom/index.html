@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="今お使いの月額ツールの代わりに、あなたの仕事に合わせた専用のツールをGoogleスプレッドシートの中にお作りします。作成3,000円（モニター価格・先着5名）、ツールの月々の利用料はかかりません。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="汎用ツールに高額なサブスク課金をする時代は終わりました">
+<meta property="og:description" content="今お使いの月額ツールの代わりに、あなたの仕事に合わせた専用のツールをGoogleスプレッドシートの中にお作りします。作成3,000円（モニター価格・先着5名）、ツールの月々の利用料はかかりません。">
+<meta property="og:url" content="https://saizokg.github.io/spreadsheet-automation/custom/">
+<title>月額ツールの見直し｜スプレッドシートで専用ツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Poppins:wght@500;600;700&display=swap">
+<style>
+/* Layout: 白いヘッダー＋メニュー → 方眼の入った淡い青の見出し帯（左に約束、右に在庫表の画面）→ 左に青線を引いた見出し箱のセクションが続く → 紺の相談帯 → フッター。左揃え・格子で揃える */
+:root{
+  --brand:#1D4ED8;
+  --brand-hover:#1E40AF;
+  --on-brand:#FFFFFF;
+  --navy:#0E2A5E;
+  --on-navy:#FFFFFF;
+  --on-navy-muted:#C5D1E8;
+  --bg:#FFFFFF;
+  --bg-alt:#F3F6FA;
+  --sky:#E8F0FE;
+  --grid-line:rgba(29,78,216,.07);
+  --text:#111827;
+  --muted:#4B5563;
+  --line:#DCE3EC;
+  --ok:#16A34A;
+  --focus:#2563EB;
+  --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.08);
+  /* 見本の表は Google スプレッドシートの見た目に寄せる（両テーマ共通） */
+  --sheet-bg:#FFFFFF;
+  --sheet-head:#F8F9FA;
+  --sheet-grid:#E2E3E3;
+  --sheet-text:#202124;
+  --sheet-sub:#5F6368;
+  --sheet-sel:#1A73E8;
+  --sheet-green:#188038;
+  --sheet-new:#E8F0FE;
+  --font-jp:"Noto Sans JP","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --font-num:"Poppins","Noto Sans JP","Hiragino Sans","Meiryo",system-ui,sans-serif;
+  --font-sheet:Arial,"Noto Sans JP","Meiryo",sans-serif;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;--s8:64px;--s9:96px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --brand:#4F86F7;--brand-hover:#6E9BF9;--on-brand:#06122B;--navy:#0D2148;--on-navy-muted:#B4C2DD;
+    --bg:#0A111E;--bg-alt:#101A2B;--sky:#122241;--grid-line:rgba(120,160,255,.07);
+    --text:#E6EAF1;--muted:#A6B1C3;--line:#243149;--focus:#7AA7FF;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --brand:#4F86F7;--brand-hover:#6E9BF9;--on-brand:#06122B;--navy:#0D2148;--on-navy-muted:#B4C2DD;
+  --bg:#0A111E;--bg-alt:#101A2B;--sky:#122241;--grid-line:rgba(120,160,255,.07);
+  --text:#E6EAF1;--muted:#A6B1C3;--line:#243149;--focus:#7AA7FF;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-jp);font-size:16px;line-height:1.85;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.4;letter-spacing:.02em}
+p{margin:0}
+a{color:inherit}
+ul,ol,dl,dd{margin:0;padding:0}
+.nw{display:inline-block}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1140px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ico{width:28px;height:28px;flex:none}
+
+/* ヘッダー */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:var(--s5);min-height:68px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex:none}
+.logo svg{width:34px;height:34px}
+.logo b{font:700 1.2rem/1 var(--font-num);letter-spacing:.02em;white-space:nowrap}
+.logo small{display:block;font-size:.7rem;color:var(--muted);font-weight:500;line-height:1.2;margin-top:4px;letter-spacing:.04em}
+.nav{display:none;margin-left:auto;gap:var(--s5);font-size:.9rem;font-weight:500}
+.nav a{white-space:nowrap;text-decoration:none;padding:var(--s2) 0;border-bottom:2px solid transparent}
+.nav a:hover{border-bottom-color:var(--brand);color:var(--brand)}
+.top .btn{margin-left:auto;white-space:nowrap}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);min-height:48px;padding:10px 26px;border-radius:6px;
+  font:700 1rem/1.3 var(--font-jp);text-decoration:none;cursor:pointer;border:2px solid var(--brand);background:var(--brand);color:var(--on-brand);
+  transition:background-color .15s ease,border-color .15s ease,color .15s ease}
+.btn:hover{background:var(--brand-hover);border-color:var(--brand-hover)}
+.btn.ghost{background:transparent;color:var(--brand)}
+.btn.ghost:hover{background:var(--sky)}
+.btn.sm{min-height:44px;padding:8px 18px;font-size:.92rem}
+.btn[aria-disabled="true"]{cursor:default}
+
+/* 見出し帯（ヒーロー） */
+.hero{background-color:var(--sky);background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:32px 32px;border-bottom:1px solid var(--line)}
+.hero .wrap{display:grid;grid-template-columns:1fr;gap:var(--s7);padding-block:var(--s8)}
+.hero-copy{min-width:0;display:flex;flex-direction:column;gap:var(--s5)}
+.hero .for{font-weight:700;color:var(--brand);font-size:.95rem;letter-spacing:.04em}
+.hero h1{font-size:clamp(1.8rem,1.2rem + 2.4vw,2.85rem);font-weight:900;line-height:1.35}
+.hero .lead{color:var(--muted);font-size:clamp(1rem,.96rem + .25vw,1.1rem);max-width:34em}
+.points{list-style:none;display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5)}
+.points li{display:flex;align-items:center;gap:6px;font-weight:700;font-size:.95rem}
+.points svg{width:20px;height:20px;color:var(--ok);flex:none}
+.hero .actions{display:flex;flex-wrap:wrap;gap:var(--s3);margin-top:var(--s2)}
+.hero .note{font-size:.85rem;color:var(--muted)}
+
+/* 在庫表の画面（見本） */
+.screen{margin:0;min-width:0;position:relative;display:flex;flex-direction:column;gap:var(--s3)}
+.window{background:var(--sheet-bg);color:var(--sheet-text);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.win-bar{display:flex;align-items:center;gap:var(--s2);padding:10px 14px;border-bottom:1px solid var(--sheet-grid);font:700 .92rem/1.2 var(--font-sheet)}
+.win-bar i{width:16px;height:20px;border-radius:3px;background:var(--sheet-green);position:relative;flex:none}
+.win-bar i::after{content:"";position:absolute;inset:6px 3px 5px;border:1.5px solid var(--sheet-bg);border-radius:1px}
+.win-bar em{margin-left:auto;font-style:normal;font-weight:400;font-size:.74rem;color:var(--sheet-sub)}
+.grid-scroll{overflow-x:auto}
+.grid{width:100%;border-collapse:collapse;font:400 .8rem/1.3 var(--font-sheet);font-variant-numeric:tabular-nums}
+.grid th,.grid td{border:1px solid var(--sheet-grid);padding:7px 9px;white-space:nowrap;text-align:left}
+.grid thead th{background:var(--sheet-head);color:var(--sheet-sub);font-weight:400;text-align:center;font-size:.72rem;padding:4px}
+.grid .rn{background:var(--sheet-head);color:var(--sheet-sub);text-align:center;width:30px;font-size:.72rem;padding:4px}
+.grid .hdr td:not(.rn){font-weight:700;background:#F1F5FB}
+.grid .num{text-align:right}
+.grid .st{display:inline-block;font-size:.7rem;padding:1px 8px;border-radius:999px;background:#E6F4EA;color:var(--sheet-green);font-weight:700}
+.grid .new td:not(.rn){background:var(--sheet-new)}
+.grid .new .sel{outline:2px solid var(--sheet-sel);outline-offset:4px;border-radius:1px}
+.grid .empty td{height:30px}
+.tag-new{display:inline-block;margin-left:6px;font-size:.66rem;font-weight:700;background:var(--sheet-sel);color:#fff;padding:1px 6px;border-radius:3px;vertical-align:1px}
+.sheet-tabs{display:flex;gap:2px;padding:6px 10px 0;background:var(--sheet-head);border-top:1px solid var(--sheet-grid);font:400 .72rem/1 var(--font-sheet);color:var(--sheet-sub)}
+.sheet-tabs span{padding:7px 12px}
+.sheet-tabs .on{background:var(--sheet-bg);color:var(--sheet-green);font-weight:700;border-radius:6px 6px 0 0;box-shadow:inset 0 -2px 0 var(--sheet-green)}
+.toast{align-self:flex-start;display:flex;align-items:center;gap:var(--s3);background:var(--sheet-bg);color:var(--sheet-text);border:1px solid var(--line);border-left:4px solid var(--sheet-sel);border-radius:8px;padding:10px 16px;box-shadow:var(--shadow);max-width:100%}
+.toast svg{width:24px;height:24px;color:var(--sheet-sel);flex:none}
+.toast b{display:block;font-size:.76rem;color:var(--sheet-sub);font-weight:700;line-height:1.3}
+.toast span{display:block;font-weight:700;font-size:.9rem;line-height:1.4}
+.toast span i{display:inline-block;font-style:normal}
+.screen figcaption{font-size:.8rem;color:var(--muted);line-height:1.6}
+@media (prefers-reduced-motion: no-preference){
+  .screen .toast{animation:toastIn .5s ease-out both}
+  .screen .new td:not(.rn){animation:rowIn 1.6s ease-out .6s both}
+  .screen .tag-new{animation:fadeTag .4s ease-out 1s both}
+}
+@keyframes toastIn{from{transform:translateY(-10px)}to{transform:none}}
+@keyframes rowIn{0%{background:var(--sheet-bg)}30%{background:#C6DAFC}100%{background:var(--sheet-new)}}
+@keyframes fadeTag{from{transform:scale(.7)}to{transform:none}}
+
+/* 導入文 */
+.intro .wrap{padding-block:var(--s7)}
+.intro p{max-width:46em;font-size:1.02rem}
+.intro strong{color:var(--brand)}
+
+/* セクション共通：左に線を引いた見出し箱 */
+.sec{padding-block:var(--s8)}
+.sec.alt{background:var(--bg-alt)}
+.h-box{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-left:6px solid var(--brand);background:var(--bg);padding:14px 22px;margin-bottom:var(--s6)}
+.sec.alt .h-box{background:var(--bg)}
+.h-box h2{font-size:clamp(1.3rem,1.08rem + .9vw,1.75rem);font-weight:700}
+.h-box p{color:var(--muted);font-size:.92rem}
+.sec-lead{max-width:46em;margin-bottom:var(--s6)}
+
+/* お悩み */
+.worry{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:var(--s5) var(--s6)}
+.worry ul{list-style:none;display:grid;gap:var(--s3)}
+.worry li{display:flex;gap:var(--s3);align-items:flex-start;line-height:1.7}
+.worry li::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--brand);margin-top:.65em}
+.solve{margin-top:var(--s5);background:var(--navy);color:var(--on-navy);border-radius:8px;padding:var(--s5) var(--s6);display:flex;flex-direction:column;gap:6px}
+.solve b{font-size:clamp(1.15rem,1rem + .6vw,1.45rem);font-weight:900;line-height:1.5}
+.solve span{color:var(--on-navy-muted);font-size:.92rem}
+
+/* サービス内容：アイコン付きの箱を格子に */
+.cards{display:grid;grid-template-columns:1fr;gap:var(--s4)}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:var(--s5);display:flex;flex-direction:column;gap:var(--s2);min-width:0}
+.card .head{display:flex;align-items:center;gap:var(--s3);color:var(--brand)}
+.card h3{font-size:1.08rem;font-weight:700;color:var(--text)}
+.card p{font-size:.93rem;line-height:1.75}
+.card .ex{font-size:.83rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:var(--s2);margin-top:auto;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px var(--s3)}
+.card .see{color:var(--brand);font-weight:700;text-underline-offset:3px;white-space:nowrap}
+.sub-h{font-size:1.1rem;font-weight:700;margin:var(--s7) 0 var(--s4);display:flex;align-items:center;gap:var(--s2)}
+.sub-h::before{content:"";width:4px;height:1.1em;background:var(--brand)}
+
+/* 入力の見本：元の情報 → 表。同じ色＝同じ情報 */
+:root{
+  --mk-a-bg:#DBEAFE;--mk-a-line:#2563EB;
+  --mk-b-bg:#DCFCE7;--mk-b-line:#16A34A;
+  --mk-c-bg:#FEF3C7;--mk-c-line:#D97706;
+  --mk-d-bg:#EDE9FE;--mk-d-line:#7C3AED;
+  --font-mono:ui-monospace,"Cascadia Mono",Consolas,"Noto Sans JP",monospace;
+}
+[id]{scroll-margin-top:84px}
+.tabs{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s5)}
+.tab{font:700 .92rem/1.3 var(--font-jp);min-height:44px;padding:10px 16px;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:6px;cursor:pointer}
+.tab:hover{border-color:var(--brand);color:var(--brand)}
+.tab[aria-selected="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.demo{display:grid;grid-template-columns:1fr;gap:var(--s3);align-items:center}
+.demo > div{min-width:0}
+.pane-label{font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:var(--s2)}
+.via{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--brand);font-size:.78rem;font-weight:700;text-align:center;line-height:1.4}
+.via svg{width:30px;height:30px;transform:rotate(90deg)}
+.demo-note{margin-top:var(--s5);font-size:.93rem;max-width:52em;display:flex;gap:var(--s2);align-items:flex-start}
+.demo-note svg{width:20px;height:20px;color:var(--brand);flex:none;margin-top:4px}
+.mk{border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 var(--lc)}
+.mk.a{background:var(--mk-a-bg);--lc:var(--mk-a-line)}
+.mk.b{background:var(--mk-b-bg);--lc:var(--mk-b-line)}
+.mk.c{background:var(--mk-c-bg);--lc:var(--mk-c-line)}
+.mk.d{background:var(--mk-d-bg);--lc:var(--mk-d-line)}
+.paper{background:var(--sheet-bg);color:var(--sheet-text);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.paper-head{display:grid;gap:2px;padding:10px 14px;border-bottom:1px solid var(--sheet-grid)}
+.paper-head span{font-size:.74rem;color:var(--sheet-sub)}
+.paper-head b{font-size:.92rem}
+.paper-body{padding:12px 14px;font-size:.86rem;line-height:1.85}
+.paper-body dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px}
+.paper-body dt{color:var(--sheet-sub)}
+.paper-body ul{list-style:none;display:grid;gap:2px;margin-top:4px}
+.file-bar{display:flex;align-items:center;gap:var(--s2);padding:9px 14px;border-bottom:1px solid var(--sheet-grid);font:700 .8rem/1.2 var(--font-mono)}
+.file-bar i{width:14px;height:17px;border:1.5px solid var(--sheet-sub);border-radius:2px;flex:none}
+.csv{margin:0;padding:12px 14px;font:400 .76rem/1.9 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.csv .done{color:#9AA0A6}
+.grid .pick td:not(.rn){background:#FFFBEB}
+.grid .st.wait{background:#FEF3C7;color:#B45309}
+.grid .total td:not(.rn){font-weight:700}
+@media (prefers-reduced-motion: no-preference){
+  .panel .new td:not(.rn){animation:rowIn 1.4s ease-out .25s both}
+}
+@media (min-width:900px){
+  .demo{grid-template-columns:minmax(0,1fr) 96px minmax(0,1.15fr)}
+  .via svg{transform:none}
+}
+
+/* 特長 */
+.feat{display:grid;grid-template-columns:1fr;gap:var(--s4)}
+.feat .card{flex-direction:row;align-items:flex-start;gap:var(--s4)}
+.feat .ico-box{flex:none;width:52px;height:52px;border-radius:8px;background:var(--sky);color:var(--brand);display:grid;place-items:center}
+.feat h3{margin-bottom:4px}
+
+/* 運用事例 */
+.cases{display:grid;grid-template-columns:1fr;gap:var(--s4)}
+.case{background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+.case .label{font-size:.75rem;font-weight:700;color:var(--brand);padding:var(--s4) var(--s5) 0;letter-spacing:.04em}
+.case h3{font-size:1.05rem;padding:4px var(--s5) var(--s3);color:var(--text)}
+.case dl{display:grid;grid-template-columns:auto 1fr;border-top:1px solid var(--line);margin-top:auto}
+.case dt,.case dd{padding:var(--s3) var(--s4);font-size:.9rem;line-height:1.65}
+.case dt{font-weight:700;color:var(--muted);background:var(--bg-alt);border-bottom:1px solid var(--line);white-space:nowrap}
+.case dd{border-bottom:1px solid var(--line)}
+.case dt.after{color:var(--brand)}
+.case dd.after{font-weight:700}
+.case dl > :nth-last-child(-n+2){border-bottom:none}
+
+/* 料金表 */
+.price-table{width:100%;border-collapse:collapse;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.price-table th,.price-table td{padding:var(--s4) var(--s5);border-bottom:1px solid var(--line);text-align:left;vertical-align:top;line-height:1.7}
+.price-table tr:last-child th,.price-table tr:last-child td{border-bottom:none}
+.price-table th{width:30%;background:var(--bg-alt);font-weight:700;font-size:.95rem}
+.price-table .amt{font:600 1.7rem/1.2 var(--font-num);font-variant-numeric:tabular-nums;color:var(--text)}
+.price-table .amt small{font:700 .95rem/1 var(--font-jp);margin-left:2px}
+.price-table .badge{display:inline-block;margin-left:var(--s3);vertical-align:4px;background:var(--brand);color:var(--on-brand);font-size:.78rem;font-weight:700;padding:2px 10px;border-radius:4px}
+.price-table td span{display:block;color:var(--muted);font-size:.9rem}
+.table-scroll{overflow-x:auto;border-radius:8px}
+
+/* 流れ（順番がある） */
+.flow{list-style:none;display:grid;grid-template-columns:1fr;gap:var(--s4);counter-reset:step}
+.flow li{counter-increment:step;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:var(--s5);display:flex;flex-direction:column;gap:var(--s2);position:relative}
+.flow li::before{content:"STEP " counter(step);font:600 .8rem/1 var(--font-num);color:var(--on-brand);background:var(--brand);align-self:flex-start;padding:5px 10px;border-radius:4px;letter-spacing:.06em}
+.flow b{font-size:1.02rem;line-height:1.55}
+.flow span{color:var(--muted);font-size:.9rem;line-height:1.7}
+
+/* よくある質問 */
+.faq{display:grid;gap:var(--s3);max-width:52em}
+.faq details{background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.faq summary{list-style:none;cursor:pointer;display:flex;gap:var(--s3);align-items:flex-start;padding:var(--s4) var(--s5);font-weight:700;line-height:1.6}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before,.faq .ans::before{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font:600 .9rem/1 var(--font-num)}
+.faq summary::before{content:"Q";background:var(--brand);color:var(--on-brand)}
+.faq summary::after{content:"";flex:none;margin-left:auto;margin-top:8px;width:10px;height:10px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s ease}
+.faq details[open] summary::after{transform:rotate(225deg);margin-top:12px}
+.faq .ans{display:flex;gap:var(--s3);padding:0 var(--s5) var(--s4);color:var(--muted);line-height:1.8}
+.faq .ans::before{content:"A";background:var(--sky);color:var(--brand)}
+
+/* 相談帯 */
+.cta{background:var(--navy);color:var(--on-navy)}
+.cta .wrap{padding-block:var(--s8);display:grid;gap:var(--s4);justify-items:center;text-align:center}
+.cta h2{font-size:clamp(1.4rem,1.1rem + 1.2vw,2rem);font-weight:900}
+.cta p{color:var(--on-navy-muted);max-width:38em}
+.cta .btn{margin-top:var(--s2);min-height:56px;padding:12px 40px;font-size:1.08rem;background:#FFFFFF;color:#0E2A5E;border-color:#FFFFFF}
+.cta .btn:hover{background:#E8F0FE;border-color:#E8F0FE}
+.cta .pending{font-size:.85rem;color:var(--on-navy-muted)}
+
+/* フッター */
+.foot{border-top:1px solid var(--line)}
+.foot .wrap{padding-block:var(--s6);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s4)}
+.foot nav{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);font-size:.85rem}
+.foot nav a{text-decoration:none;color:var(--muted)}
+.foot nav a:hover{color:var(--brand)}
+.foot small{font-size:.8rem;color:var(--muted)}
+
+/* 特定商取引法に基づく表記：料金表と同じ枠で、文字は一段小さく */
+.legal{padding-block:var(--s7)}
+.legal .h-box h2{font-size:1.1rem}
+.legal .price-table th,.legal .price-table td{font-size:.86rem;padding:var(--s3) var(--s4)}
+.legal .price-table th{width:28%}
+
+@media (min-width:640px){
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .feat{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .flow{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (min-width:900px){
+  .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .cases{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .flow{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .flow li:not(:last-child)::after{content:"";position:absolute;right:-13px;top:50%;width:10px;height:10px;border-top:2px solid var(--brand);border-right:2px solid var(--brand);transform:translateY(-50%) rotate(45deg)}
+}
+@media (min-width:1000px){
+  .hero .wrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;padding-block:var(--s9)}
+}
+/* 見出しのロゴが日本語（スプレッドシート自動化）で幅を取るので、メニューは1100px以上で出す（960pxで折り返して崩れた） */
+@media (min-width:1100px){
+  .nav{display:flex}
+  .top .btn{margin-left:var(--s2)}
+}
+@media (max-width:560px){
+  .grid .c-date{display:none}
+  .logo small{display:none}
+  .logo b{font-size:1rem}
+  .top .wrap{gap:var(--s3)}
+  .price-table th{width:34%}
+  .h-box{padding:12px 16px}
+  .worry,.solve{padding:var(--s5)}
+}
+@media (max-width:360px){
+  .logo{gap:6px}
+  .logo svg{width:26px;height:26px}
+  .logo b{font-size:.88rem}
+  .top .btn.sm{padding:8px 12px}
+  .hero h1{font-size:1.55rem}
+}
+@media (prefers-reduced-motion: reduce){
+  .btn,.faq summary::after{transition:none}
+}
+
+/* ===== このページだけの部品 ===== */
+/* 5年間に払う金額（例）：月額のボタンで計算し直す。見本なので両テーマ共通の白い札 */
+.cost{background:var(--sheet-bg);color:var(--sheet-text);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:var(--s5);display:flex;flex-direction:column;gap:var(--s4);min-width:0}
+.cost-title{font-size:1.02rem;font-weight:700;line-height:1.5}
+.cost .pick{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center;font-size:.85rem;color:var(--sheet-sub)}
+.cost .pick span{width:100%}
+.cost .pick button{font:600 .9rem/1 var(--font-num);min-height:44px;padding:0 14px;border-radius:6px;border:1px solid var(--sheet-grid);background:var(--sheet-bg);color:var(--sheet-text);cursor:pointer}
+.cost .pick button:hover{border-color:var(--sheet-sel)}
+.cost .pick button[aria-pressed="true"]{background:var(--sheet-sel);border-color:var(--sheet-sel);color:#FFFFFF}
+.cost .pick button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.cost .row{display:grid;gap:6px}
+.cost .name{display:flex;justify-content:space-between;align-items:baseline;gap:4px var(--s3);flex-wrap:wrap;font-size:.86rem;font-weight:700}
+.cost .name output{font:700 1.2rem/1.2 var(--font-num);font-variant-numeric:tabular-nums}
+.cost .bar{height:14px;border-radius:7px;background:var(--sheet-head);border:1px solid var(--sheet-grid);overflow:hidden}
+.cost .bar i{display:block;height:100%;background:var(--sheet-sub);transition:width .4s ease}
+.cost .ours .bar i{background:var(--sheet-sel)}
+.cost .ours output{color:var(--sheet-sel)}
+.cost .diff{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px var(--s3);border-top:1px dashed var(--sheet-grid);padding-top:var(--s3);font-weight:700}
+.cost .diff output{font:700 1.5rem/1.2 var(--font-num);color:var(--sheet-sel);font-variant-numeric:tabular-nums}
+.cost .fine{font-size:.76rem;color:var(--sheet-sub);line-height:1.65}
+
+/* 今のツールと比べると */
+.compare{width:100%;min-width:560px;border-collapse:collapse;background:var(--bg);border:1px solid var(--line)}
+.compare th,.compare td{padding:var(--s4);border-bottom:1px solid var(--line);text-align:left;vertical-align:top;line-height:1.7;font-size:.93rem}
+.compare thead th{background:var(--bg-alt);font-size:.9rem}
+.compare thead th.ours{background:var(--brand);color:var(--on-brand)}
+.compare tbody th{width:18%;background:var(--bg-alt);font-weight:700;font-size:.9rem}
+.compare td.ours{font-weight:700;background:var(--sky)}
+.compare tr:last-child th,.compare tr:last-child td{border-bottom:none}
+
+/* 置き換えられるツール／向かないツール */
+.fit{display:grid;grid-template-columns:1fr;gap:var(--s4)}
+.fit > div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:var(--s5) var(--s6)}
+.fit h3{font-size:1.05rem;margin-bottom:var(--s3)}
+.fit .yes h3{color:var(--brand)}
+.fit .no h3{color:var(--muted)}
+.fit ul{list-style:none;display:grid;gap:var(--s2)}
+.fit li{display:flex;gap:var(--s3);line-height:1.7}
+.fit li::before{flex:none;font-weight:700;width:1em}
+.fit .yes li::before{content:"○";color:var(--brand)}
+.fit .no li::before{content:"×";color:var(--muted)}
+.fit-note{margin-top:var(--s4);font-size:.92rem;color:var(--muted)}
+@media (min-width:640px){
+  .fit{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  .cost .bar i{transition:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="ページの先頭へ">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="7" fill="var(--brand)"/><g fill="none" stroke="var(--on-brand)" stroke-width="1.6" opacity=".55"><path d="M7 13.5h20M7 20.5h20M13.5 7v20M20.5 7v20"/></g><rect x="20.5" y="20.5" width="6.5" height="6.5" rx="1" fill="var(--on-brand)"/></svg>
+      <span><b>スプレッドシート自動化</b><small>事業者さま向け</small></span>
+    </a>
+    <nav class="nav" aria-label="ページ内メニュー">
+      <a href="#compare">比べてみる</a>
+      <a href="#fit">置き換えられるツール</a>
+      <a href="#price">料金</a>
+      <a href="#flow">ご依頼の流れ</a>
+      <a href="#faq">よくある質問</a>
+    </nav>
+    <a class="btn sm js-form" href="#soudan">無料相談</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div class="hero-copy">
+        <h1 id="hero-title"><span class="nw">汎用ツールに</span><span class="nw">高額な</span><span class="nw">サブスク課金をする</span><span class="nw">時代は</span><span class="nw">終わりました。</span></h1>
+        <p class="lead">事業主の皆さんは様々な月額ツールをお使いだと思います。しかし、それらはきっと、あなたのために作られたものではありません。あなたの仕事に合わせた専用のツールを、Googleスプレッドシートの中にお作りします。作るのは3,000円（モニター価格）。ツールの月々の利用料はかかりません。</p>
+        <ul class="points" aria-label="お約束">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>使う機能だけを作る</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>画面はあなたの仕事に合わせて</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>保守を付けても月500円</li>
+        </ul>
+        <div class="actions">
+          <a class="btn js-form" href="#soudan">無料で相談する</a>
+          <a class="btn ghost" href="#compare">今のツールと比べる</a>
+        </div>
+        <p class="note">全国どこからでも、オンラインで対応します。</p>
+      </div>
+
+      <aside class="cost" aria-labelledby="cost-title">
+        <p class="cost-title" id="cost-title">5年間に払う金額（例）</p>
+        <div class="pick" role="group" aria-label="今のツールの月額を選ぶ">
+          <span>今のツールの月額を選んでください</span>
+          <button type="button" data-m="3000" aria-pressed="false">3,000円</button>
+          <button type="button" data-m="5000" aria-pressed="true">5,000円</button>
+          <button type="button" data-m="10000" aria-pressed="false">10,000円</button>
+          <button type="button" data-m="30000" aria-pressed="false">30,000円</button>
+        </div>
+        <div class="row">
+          <div class="name"><span>今のツール（月額 <span id="c-month">5,000</span>円 × 60か月）</span><output id="c-theirs">300,000円</output></div>
+          <div class="bar"><i id="b-theirs" style="width:100%"></i></div>
+        </div>
+        <div class="row ours">
+          <div class="name"><span>専用ツール（作成3,000円＋保守 月500円 × 60か月）</span><output id="c-ours">33,000円</output></div>
+          <div class="bar"><i id="b-ours" style="width:11%"></i></div>
+        </div>
+        <div class="diff"><span>5年間の差</span><output id="c-diff" aria-live="polite">267,000円</output></div>
+        <p class="fine">金額は例です。作成3,000円はモニター価格（先着5名）。保守は任意で、付けない場合の月々の費用は0円です。保守の月500円は基本使用料で、直す作業の費用は別に作業前にお見積もりします。</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="intro" aria-label="はじめに">
+    <div class="wrap">
+      <p>今お使いのツールは、確かに優れているかもしれません。ただ、それは多くの会社に合うように作られた<strong>汎用のツール</strong>です。合わない所はがまんして、高い月額を払い続けるしかなかったのは、専用の道具を作ると高くついたからです。今はAIを使えば、あなたの仕事に合わせた道具を安く作れます。「自分ではできない」という方のために、作るところをお手伝いします。できあがるツールはGoogleスプレッドシートの中で動くので、AIの契約は要りません。</p>
+    </div>
+  </section>
+
+  <section class="sec alt" aria-labelledby="worry-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="worry-title">こんなことはありませんか？</h2></div>
+      <div class="worry">
+        <ul>
+          <li>使っていない機能の分まで、毎月払っている気がする</li>
+          <li>使う人が増えるたびに、月額が上がっていく</li>
+          <li>画面の項目が仕事に合わず、結局メモや別の表と二重に管理している</li>
+          <li>ちょっとした変更でも、自分たちでは直せない</li>
+          <li>値上げの知らせが来ても、データを移すのが大変でやめられない</li>
+        </ul>
+      </div>
+      <div class="solve">
+        <b>その道具、あなた専用に作り直しませんか。</b>
+        <span>今のツールで実際に使っている部分だけを、Googleスプレッドシートの中に作ります。</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="compare" aria-labelledby="compare-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="compare-title">今のツールと比べると</h2></div>
+      <div class="table-scroll">
+        <table class="compare">
+          <thead>
+            <tr><td></td><th scope="col">今お使いの汎用ツール</th><th scope="col" class="ours">あなた専用のツール</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">月々の費用</th><td>ツールごとの月額。使う人数や機能で上がることもあります</td><td class="ours">0円（保守を付けても月500円）</td></tr>
+            <tr><th scope="row">画面</th><td>多くの会社に合うように作られた共通の画面</td><td class="ours">項目・並び・ボタンを、あなたの仕事に合わせて作ります</td></tr>
+            <tr><th scope="row">機能</th><td>使わない機能もまとめて入っています</td><td class="ours">実際に使う機能だけ</td></tr>
+            <tr><th scope="row">データの置き場所</th><td>ツール会社のサーバー</td><td class="ours">あなたのGoogleスプレッドシート</td></tr>
+            <tr><th scope="row">作る費用</th><td>―</td><td class="ours">3,000円（モニター価格・先着5名）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt" id="fit" aria-labelledby="fit-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="fit-title">置き換えられるツール</h2><p>表に記録して、探して、まとめる仕事が向いています。</p></div>
+      <div class="fit">
+        <div class="yes">
+          <h3>置き換えやすいもの</h3>
+          <ul>
+            <li>顧客名簿・会員の台帳</li>
+            <li>予約や問い合わせの受付</li>
+            <li>日報・作業の記録</li>
+            <li>在庫表・仕入れの台帳</li>
+            <li>売上・経費の集計表</li>
+          </ul>
+        </div>
+        <div class="no">
+          <h3>置き換えに向かないもの（現在お受けしていません）</h3>
+          <ul>
+            <li>ネットショップや決済の仕組みそのもの</li>
+            <li>会計・税の申告のソフト</li>
+            <li>販売サイト（Amazon・Shopifyなど）と自動でつなぐもの</li>
+            <li>大人数が同時に使う基幹システム</li>
+          </ul>
+        </div>
+      </div>
+      <p class="fit-note">迷ったら、相談フォームの「今の記録に使っているもの」で「その他」を選び、今お使いのツール名を書いてください。置き換えられるかをお返事します。</p>
+    </div>
+  </section>
+
+  <section class="sec" id="price" aria-labelledby="price-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="price-title">料金</h2></div>
+      <div class="table-scroll">
+        <table class="price-table">
+          <tbody>
+            <tr><th scope="row">ツールの作成</th><td><span class="amt">3,000<small>円</small></span><span class="badge">モニター価格・先着5名</span><span>今のツールの代わりになる、仕事1つ分のツール。使い方の説明つきでお渡しします。</span></td></tr>
+            <tr><th scope="row">納品後の修正</th><td><strong>1か月間 無料</strong><span>最初に決めた内容のとおりに動かないときの修正です（機能の追加は含みません）。</span></td></tr>
+            <tr><th scope="row">保守</th><td><span class="amt">500<small>円／月</small></span><span>月額500円の基本使用料で、ずっと作業分の費用だけで修正・保守します。</span></td></tr>
+            <tr><th scope="row">有料の修正</th><td><strong>作業前にお見積もり</strong><span>直す前に金額をお伝えし、その額を超えて請求することはありません。</span></td></tr>
+            <tr><th scope="row">AI・ソフトの費用</th><td><strong>かかりません</strong><span>ツールはお使いのGoogleスプレッドシートの中で動きます。</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt" id="flow" aria-labelledby="flow-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="flow-title">ご依頼の流れ</h2></div>
+      <ol class="flow">
+        <li><b>無料相談</b><span>相談フォームから、困っている作業を教えてください。まとまっていなくても大丈夫です。</span></li>
+        <li><b>ご提案・お見積もり</b><span>どの作業を、どこまで自動にするかを一緒に決め、金額をお伝えします。</span></li>
+        <li><b>設置</b><span>お使いのスプレッドシートに招待していただき、こちらで組み込みます。自動で動かすための最初の許可だけ、ご本人のアカウントで押していただきます。</span></li>
+        <li><b>納品・1か月の無料修正</b><span>使い方の説明つきで納品します。修正の期間が終わったら、共有を外していただきます。</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec" id="faq" aria-labelledby="faq-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="faq-title">よくある質問</h2></div>
+      <div class="faq">
+        <details id="faq-1"><summary>今のツールと全く同じものを作ってもらえますか？</summary><p class="ans">全く同じものではなく、今のツールで実際に使っている機能だけを、Googleスプレッドシートの中に作ります。使わない機能まで作ることはしません。</p></details>
+        <details id="faq-2"><summary>今のツールのデータは移せますか？</summary><p class="ans">CSVなどで書き出せるデータなら、スプレッドシートに取り込めることが多いです。書き出せるかどうかは、ご相談の際に一緒に確かめます。</p></details>
+        <details id="faq-3"><summary>月々の費用は本当にかからないのですか？</summary><p class="ans">ツールはお使いのGoogleスプレッドシートの中で動くので、ツールの利用料やAIの契約はかかりません。保守をご希望の方は、月額500円の基本使用料で、ずっと作業分の費用だけで修正・保守します。</p></details>
+        <details id="faq-4"><summary>使う人が増えると、料金は上がりますか？</summary><p class="ans">こちらの料金は、使う人数では変わりません。使う方それぞれに、Googleアカウント（無料）があれば使えます。</p></details>
+        <details id="faq-5"><summary>どんなツールでも置き換えられますか？</summary><p class="ans">「置き換えられるツール」の欄をご覧ください。決済・会計や税の申告のソフト・販売サイトとのシステム連携などは、現在お受けしていません。</p></details>
+        <details id="faq-6"><summary>GASやプログラムの知識がなくても頼めますか？</summary><p class="ans">はい。組み込みはこちらで行います。お渡しするのは、ボタンの押し方や結果の見方をまとめた「使い方」だけです。</p></details>
+        <details id="faq-7"><summary>シートの中身を見られるのが心配です。</summary><p class="ans">招待していただいたスプレッドシートだけで作業します。修正の期間が終わったら、共有を外していただきます。</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="soudan" aria-labelledby="cta-title">
+    <div class="wrap">
+      <h2 id="cta-title"><span class="nw">使いづらいツールを</span><span class="nw">高額で使い続けるのは、</span><span class="nw">もうやめにしましょう。</span></h2>
+      <p>今お使いのツール名と、困っていることを教えてください。ご相談は無料です。</p>
+      <a class="btn js-form" id="form-btn" href="#soudan">相談フォームを開く</a>
+      <p class="pending" id="form-pending">相談フォームは準備中です。</p>
+    </div>
+  </section>
+
+  <section class="sec legal" id="tokushoho" aria-labelledby="legal-title">
+    <div class="wrap">
+      <div class="h-box"><h2 id="legal-title">特定商取引法に基づく表記</h2></div>
+      <div class="table-scroll">
+        <table class="price-table">
+          <tbody>
+            <tr><th scope="row">事業者名</th><td>アスレテルノ（azuleterno）</td></tr>
+            <tr><th scope="row">運営責任者・所在地・電話番号</th><td>ご請求があれば、遅滞なくメールでお知らせします（<a class="js-form" href="#soudan">相談フォーム</a>からご連絡ください）。</td></tr>
+            <tr><th scope="row">料金</th><td>ツールの作成：3,000円（モニター価格・先着5名）<br>保守：月額500円（任意）<br>納品から1か月を過ぎた後の修正：作業の前にお見積もりした金額</td></tr>
+            <tr><th scope="row">料金のほかにかかる費用</th><td>ありません（消費税は表示の金額に含みます。インターネットの通信費はお客さまのご負担です）。</td></tr>
+            <tr><th scope="row">お支払いの時期</th><td>納品後、動作をご確認いただいてから（後払い）</td></tr>
+            <tr><th scope="row">お支払いの方法</th><td>銀行振込（保守の月額のお支払い方法は、お申し込みの際にご案内します）</td></tr>
+            <tr><th scope="row">納品の時期</th><td>お見積もりの際にお約束した日までに納品します。</td></tr>
+            <tr><th scope="row">お申し込みの取りやめ</th><td>納品前であれば、いつでも取りやめられます（費用はかかりません）。保守はいつでも解約でき、解約した翌月から料金はかかりません。</td></tr>
+            <tr><th scope="row">数量の決まり</th><td>モニター価格は先着5名までです。</td></tr>
+            <tr><th scope="row">動作に必要な環境</th><td>Googleアカウント（無料）と、Googleスプレッドシートが使えるパソコン</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="ページの先頭へ">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="7" fill="var(--brand)"/><g fill="none" stroke="var(--on-brand)" stroke-width="1.6" opacity=".55"><path d="M7 13.5h20M7 20.5h20M13.5 7v20M20.5 7v20"/></g><rect x="20.5" y="20.5" width="6.5" height="6.5" rx="1" fill="var(--on-brand)"/></svg>
+      <span><b>スプレッドシート自動化</b><small>事業者さま向け</small></span>
+    </a>
+    <nav aria-label="フッターメニュー">
+      <a href="#compare">比べてみる</a>
+      <a href="#fit">置き換えられるツール</a>
+      <a href="#price">料金</a>
+      <a href="#flow">ご依頼の流れ</a>
+      <a href="#faq">よくある質問</a>
+      <a href="#tokushoho">特定商取引法に基づく表記</a>
+    </nav>
+    <small>© 2026 azuleterno</small>
+  </div>
+</footer>
+
+<script>
+// 相談フォームのURL（Googleフォーム）。入れると全部の「相談」ボタンがフォームを開く。
+const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd5Jnqaqoc4FJDo0Cm1AJCGg8Dw86UIGgzeEBNMrxFPZRo5eA/viewform";
+
+(function () {
+  const buttons = document.querySelectorAll(".js-form");
+  const pending = document.getElementById("form-pending");
+  const formBtn = document.getElementById("form-btn");
+  if (FORM_URL) {
+    buttons.forEach(function (a) {
+      a.href = FORM_URL;
+      a.target = "_blank";
+      a.rel = "noopener";
+    });
+    pending.hidden = true;
+  } else {
+    formBtn.setAttribute("aria-disabled", "true");
+    formBtn.addEventListener("click", function (e) { e.preventDefault(); });
+  }
+
+
+  // 5年間に払う金額（例）：月額のボタンで計算し直す
+  const OURS = 3000 + 500 * 60; // 作成3,000円＋保守 月500円×60か月
+  const yen = function (n) { return n.toLocaleString("ja-JP") + "円"; };
+  const picks = document.querySelectorAll(".cost .pick button");
+  function showCost(monthly) {
+    const theirs = monthly * 60;
+    document.getElementById("c-month").textContent = monthly.toLocaleString("ja-JP");
+    document.getElementById("c-theirs").textContent = yen(theirs);
+    document.getElementById("c-ours").textContent = yen(OURS);
+    document.getElementById("c-diff").textContent = yen(theirs - OURS);
+    document.getElementById("b-ours").style.width = Math.max(2, OURS / theirs * 100) + "%";
+    picks.forEach(function (b) { b.setAttribute("aria-pressed", String(Number(b.dataset.m) === monthly)); });
+  }
+  picks.forEach(function (b) { b.addEventListener("click", function () { showCost(Number(b.dataset.m)); }); });
+})();
+</script>
+</body>
+</html>
